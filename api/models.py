@@ -60,3 +60,5 @@ class Booking(models.Model):
         if self.start_time and self.duration_minutes:
             self.end_time = self.start_time + timedelta(minutes=self.duration_minutes)
         super().save(*args, **kwargs)
+
+    is_paid = models.BooleanField(default=False)

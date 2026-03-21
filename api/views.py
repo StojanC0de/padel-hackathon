@@ -8,6 +8,11 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Club, Court, Booking, Profile # <-- VERIFICĂ SĂ FIE PROFILE AICI
 from .serializers import ClubSerializer, CourtSerializer, BookingSerializer, ProfileSerializer # <-- ȘI AICI
+import stripe
+from django.conf import settings
+
+# Aici pui cheia ta secretă de test (copiată din dashboard-ul Stripe)
+stripe.api_key = "sk_test_51TDRnaBKsuqpqWPJpSe8bS5PxUuvblL4zvgRXLbuXxejuM4UeJKhBKsQp0xeqJGZpN6PHCi2wUCjx40VJTT9kJv5005gYONd1o"
 
 class ClubViewSet(viewsets.ModelViewSet):
     queryset = Club.objects.all()
@@ -37,6 +42,57 @@ class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
     permission_classes = [IsAuthenticated]
 
+    # Prima funcție: Cea care trimite spre Stripe
+    @action(detail=True, methods=['post'])
+    def create_checkout_session(self, request, pk=None):
+        booking = self.get_object()
+
+        # Stripe lucrează cu banii în "bani/cenți" (ex: 100 RON = 10000)
+        pret_in_bani = int(booking.court.price_per_hour * 100)
+
+        try:
+            # Creăm sesiunea de plată pe serverele Stripe
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[
+                    {
+                        'price_data': {
+                            'currency': 'ron',
+                            'product_data': {
+                                'name': f'Rezervare teren Padel - {booking.court.name}',
+                            },
+                            'unit_amount': pret_in_bani,
+                        },
+                        'quantity': 1,
+                    },
+                ],
+                mode='payment',
+                # URL-urile unde se întoarce userul după ce plătește
+                success_url='http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url='http://localhost:3000/cancel',
+            )
+
+            return Response({'checkout_url': checkout_session.url})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # A doua funcție: Cea care confirmă plata (Mutată aici, la același nivel!)
+    @action(detail=True, methods=['post'])
+    def confirm_payment(self, request, pk=None):
+        # Această funcție va fi apelată de React după ce plata are succes pe Stripe
+        booking = self.get_object()
+
+        # Dacă e deja plătită, nu facem nimic
+        if booking.is_paid:
+            return Response({"message": "Această rezervare este deja plătită."}, status=status.HTTP_200_OK)
+
+        # O marcăm ca plătită și o salvăm
+        booking.is_paid = True
+        booking.save()
+
+        return Response({"message": "Plata a fost confirmată cu succes!"}, status=status.HTTP_200_OK)
+
+    # ... RESTUL FUNCȚIILOR TALE RĂMÂN LA FEL (get_queryset, perform_create, destroy) ...
     def get_queryset(self):
         user = self.request.user
         queryset = Booking.objects.all()
