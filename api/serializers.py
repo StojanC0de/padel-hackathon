@@ -1,17 +1,20 @@
 from rest_framework import serializers
-from .models import Club, Court, Booking
+from .models import Club, Court, Booking, Profile  # <-- NOU: Am adăugat Profile la import
 from datetime import timedelta
 from django.utils import timezone
+
 
 class ClubSerializer(serializers.ModelSerializer):
     class Meta:
         model = Club
         fields = '__all__'
 
+
 class CourtSerializer(serializers.ModelSerializer):
     class Meta:
         model = Court
         fields = '__all__'
+
 
 class BookingSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,7 +37,6 @@ class BookingSerializer(serializers.ModelSerializer):
                 {"error": "Nu poți face o rezervare în trecut!"}
             )
 
-
         if court and start_time:
             proposed_end_time = start_time + timedelta(minutes=duration_minutes)
 
@@ -51,3 +53,25 @@ class BookingSerializer(serializers.ModelSerializer):
                 )
 
         return data
+
+
+# --- NOU: Serializer-ul pentru Profil (Puncte + Logica de Manager) ---
+class ProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    # Câmpul magic care calculează ID-ul clubului doar pentru manageri
+    managed_club_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = ['id', 'username', 'is_manager', 'loyalty_points', 'managed_club_id']
+
+    # Cum aflăm ID-ul clubului
+    def get_managed_club_id(self, obj):
+        if obj.is_manager:
+            # Căutăm clubul al cărui manager este userul curent
+            club = Club.objects.filter(manager=obj.user).first()
+            if club:
+                return club.id
+        # Dacă este un simplu jucător, returnăm null
+        return None
