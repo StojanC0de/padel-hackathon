@@ -26,28 +26,19 @@ class BookingSerializer(serializers.ModelSerializer):
         start_time = data.get('start_time')
         duration_minutes = data.get('duration_minutes', 60)
 
-        # --- NOILE REGULI DE TIMP ---
         now = timezone.now()
-        one_month_later = now + timedelta(days=30)
 
-        # 1. Verificăm să nu fie în trecut
+        # REGULA 1: Rămâne - Nu poți rezerva în trecut
         if start_time < now:
             raise serializers.ValidationError(
                 {"error": "Nu poți face o rezervare în trecut!"}
             )
 
-        # 2. Verificăm să nu fie peste mai mult de o lună
-        if start_time > one_month_later:
-            raise serializers.ValidationError(
-                {"error": "Rezervările se pot face cu maxim 30 de zile în avans."}
-            )
-        # -----------------------------
 
         if court and start_time:
-            # 3. Calculăm când se va termina meciul cerut de user
             proposed_end_time = start_time + timedelta(minutes=duration_minutes)
 
-            # 4. Verificăm suprapunerea (Overlap) - Codul tău de până acum
+            # REGULA 2: Rămâne - Nu se pot suprapune rezervările
             overlapping_bookings = Booking.objects.filter(
                 court=court,
                 start_time__lt=proposed_end_time,
@@ -56,7 +47,7 @@ class BookingSerializer(serializers.ModelSerializer):
 
             if overlapping_bookings.exists():
                 raise serializers.ValidationError(
-                    {"error": "Acest teren este deja rezervat în intervalul selectat. Te rugăm să alegi altă oră."}
+                    {"error": "Acest teren este deja rezervat în intervalul selectat."}
                 )
 
         return data

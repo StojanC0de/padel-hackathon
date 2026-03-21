@@ -80,17 +80,13 @@ class BookingViewSet(viewsets.ModelViewSet):
 
     # 1. Funcția de creare + Logică puncte
     def perform_create(self, serializer):
-        booking = serializer.save(user=self.request.user)
+        # Salvăm rezervarea
+        serializer.save(user=self.request.user)
         profile = self.request.user.profile
 
+        # Rămâne doar logica simplă de puncte
         if not profile.is_manager:
-            puncte_primite = 10  # Standard
-
-            # BONUS: Early Booking (peste 7 zile în viitor)
-            if booking.start_time > timezone.now() + timedelta(days=7):
-                puncte_primite += 5
-
-            profile.loyalty_points += puncte_primite
+            profile.loyalty_points += 10 # 10 puncte fix per rezervare
             profile.save()
 
     # 2. Funcția de anulare (Corectată și aliniată)
