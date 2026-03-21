@@ -6,6 +6,8 @@ import Hero from './components/Hero'
 import ClubList from './components/ClubList'
 import Auth from './components/Auth'
 import MyBookings from './components/MyBookings';
+import ClubDetail from './components/ClubDetail';
+import AddClub from './components/AddClub'; 
 
 // Facem o componentă separată pentru Pagina Principală (HomePage)
 // Ca să nu aglomerăm rutele
@@ -38,6 +40,12 @@ function App() {
 
           {/* Calea pentru Rezervările Mele (doar dacă e logat) */}
           <Route path="/my-bookings" element={<MyBookings />} />
+
+          {/* Calea pentru Detaliile Clubului (ex: /club/3) */}
+          <Route path="/club/:id" element={<ClubDetail />} />
+
+          {/* Căi pentru manageri (în viitor, putem adăuga protecție aici) */}
+          <Route path="/add-club" element={<AddClub />} />
         </Routes>
         
         {/* Footer-ul rămâne mereu jos */}
