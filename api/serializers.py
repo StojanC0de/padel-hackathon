@@ -3,7 +3,6 @@ from .models import Club, Court, Booking, Profile  # <-- NOU: Am adăugat Profil
 from datetime import timedelta
 from django.utils import timezone
 
-
 class ClubSerializer(serializers.ModelSerializer):
     class Meta:
         model = Club
